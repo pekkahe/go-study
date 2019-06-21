@@ -2,15 +2,17 @@ package sort
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 )
 
 type PivotSelection int
 
 const (
-	PivotStart PivotSelection = iota
+	PivotFirst PivotSelection = iota
+	PivotLast
 	PivotMiddle
-	PivotEnd
+	PivotRandom
 )
 
 func QuickSort3Way(arr []int, ps PivotSelection) {
@@ -39,12 +41,16 @@ func quickSortImpl3Way(arr []int, lo, hi int, ps PivotSelection) {
 
 func pivot(lo, hi int, ps PivotSelection) int {
 	switch ps {
-	case PivotStart:
+	case PivotFirst:
 		return lo
+	case PivotLast:
+		return hi
 	case PivotMiddle:
 		return ((hi - lo) / 2) + lo
-	default: // PivotEnd
-		return hi
+	case PivotRandom:
+		return rand.Intn(hi-lo) + lo
+	default:
+		panic(fmt.Sprintf("Unknown PivotSelection %d", ps))
 	}
 }
 

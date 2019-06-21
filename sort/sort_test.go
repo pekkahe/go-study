@@ -54,12 +54,17 @@ func TestQuickSort(t *testing.T) {
 }
 
 func TestQuickSort3Way(t *testing.T) {
-	fmt.Print("QuickSort3Way.PivotStart.")
-	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotStart) })
+	fmt.Print("QuickSort3Way.PivotFirst.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotFirst) })
+
+	fmt.Print("QuickSort3Way.PivotLast.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotLast) })
+
 	fmt.Print("QuickSort3Way.PivotMiddle.")
 	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotMiddle) })
-	fmt.Print("QuickSort3Way.PivotEnd.")
-	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotEnd) })
+
+	fmt.Print("QuickSort3Way.PivotRandom.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotRandom) })
 }
 
 func TestInsertionSort(t *testing.T) {
