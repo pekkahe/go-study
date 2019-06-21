@@ -5,34 +5,55 @@ import (
 	"strings"
 )
 
-func QuickSort3Way(arr []int) {
-	quickSortImpl3Way(arr, 0, len(arr)-1)
+type PivotSelection int
+
+const (
+	PivotStart PivotSelection = iota
+	PivotMiddle
+	PivotEnd
+)
+
+func QuickSort3Way(arr []int, ps PivotSelection) {
+	quickSortImpl3Way(arr, 0, len(arr)-1, ps)
 }
 
-func quickSortImpl3Way(arr []int, lo, hi int) {
+func quickSortImpl3Way(arr []int, lo, hi int, ps PivotSelection) {
 	if lo < hi {
-		debug := DebugPrint{arr}
-		debug.printArray(lo, hi, hi)
+		pivot := pivot(lo, hi, ps)
 
-		pivot := partition3way(arr, lo, hi, hi)
+		//debug := DebugPrint{arr}
+		//debug.printArray(lo, hi, pivot)
 
-		debug.printPartitions(lo, hi, pivot)
-		debug.printLeftSide(lo, pivot)
+		pivot = partition3way(arr, lo, hi, pivot)
 
-		quickSortImpl3Way(arr, lo, pivot-1)
+		//debug.printPartitions(lo, hi, pivot)
+		//debug.printLeftSide(lo, pivot)
 
-		debug.printRightSide(pivot, hi)
+		quickSortImpl3Way(arr, lo, pivot-1, ps)
 
-		quickSortImpl3Way(arr, pivot+1, hi)
+		//debug.printRightSide(pivot, hi)
+
+		quickSortImpl3Way(arr, pivot+1, hi, ps)
+	}
+}
+
+func pivot(lo, hi int, ps PivotSelection) int {
+	switch ps {
+	case PivotStart:
+		return lo
+	case PivotMiddle:
+		return ((hi - lo) / 2) + lo
+	default: // PivotEnd
+		return hi
 	}
 }
 
 func partition3way(arr []int, lo, hi, p int) int {
-	debug := DebugIterPrint{arr, lo, hi}
+	//debug := DebugIterPrint{arr, lo, hi}
 
 	pivot := arr[p]
 	for mid := lo; mid <= hi; {
-		debug.printBeginIter(lo, mid, hi)
+		//debug.printBeginIter(lo, mid, hi)
 
 		switch {
 		case arr[mid] < pivot:
@@ -40,16 +61,16 @@ func partition3way(arr []int, lo, hi, p int) int {
 			mid++
 			lo++
 
-			debug.printLess(pivot)
+			//debug.printLess(pivot)
 		case arr[mid] == pivot:
 			mid++
 
-			debug.printEqual(pivot)
+			//debug.printEqual(pivot)
 		default: // arr[mid] > pivot
 			arr[mid], arr[hi] = arr[hi], arr[mid]
 			hi--
 
-			debug.printGreater(pivot)
+			//debug.printGreater(pivot)
 		}
 	}
 

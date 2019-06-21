@@ -18,7 +18,7 @@ var unsorted []int
 var sorted []int
 
 func TestMain(m *testing.M) {
-	unsorted = generateSingleDigitNumbers(10)
+	unsorted = generateSingleDigitNumbers(50000)
 	sorted = append([]int(nil), unsorted...)
 
 	start := time.Now()
@@ -54,7 +54,12 @@ func TestQuickSort(t *testing.T) {
 }
 
 func TestQuickSort3Way(t *testing.T) {
-	runTest(t, pesort.QuickSort3Way)
+	fmt.Print("QuickSort3Way.PivotStart.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotStart) })
+	fmt.Print("QuickSort3Way.PivotMiddle.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotMiddle) })
+	fmt.Print("QuickSort3Way.PivotEnd.")
+	runTest(t, func(v []int) { pesort.QuickSort3Way(v, pesort.PivotEnd) })
 }
 
 func TestInsertionSort(t *testing.T) {
