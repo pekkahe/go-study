@@ -1,7 +1,7 @@
 package sort
 
 func QuickSort3Way(arr []int) {
-	quickSortImpl(arr, 0, len(arr)-1)
+	quickSortImpl3Way(arr, 0, len(arr)-1)
 }
 
 func quickSortImpl3Way(arr []int, lo, hi int) {

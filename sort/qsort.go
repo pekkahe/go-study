@@ -13,6 +13,7 @@ func quickSortImpl(arr []int, lo, hi int) {
 }
 
 func partition(arr []int, lo, hi int) int {
+	// Partitioning assumes that pivot is always the last element
 	pivot := hi
 
 	for pivot > lo {

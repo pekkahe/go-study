@@ -14,6 +14,8 @@ import (
 
 func main() {
 	values := make([]int, 40000)
+
+	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < len(values); i++ {
 		values[i] = rand.Int() % 10
 	}
