@@ -1,2 +1,5 @@
+# top-most EditorConfig file
+root = true
+
 [*.go]
 indent_size = 4
