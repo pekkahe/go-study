@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,6 +16,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type Person struct {
+	Id        primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+	FirstName string             `json:"firstname,omitempty"`
+	LastName  string             `json:"lastname,omitempty"`
+}
+
+type PeopleHandler struct {
+	people *mongo.Collection
+}
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -31,58 +43,55 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
-type PeopleHandler struct {
-	people *mongo.Collection
-}
-
 func (h PeopleHandler) ServeHTTP(w http.ResponseWriter, request *http.Request) {
+	writeOkResponse := func(msg string) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, msg)
+	}
+	writeErrorResponse := func(err error) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+	}
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 	switch request.Method {
 	case "GET":
 		p, err := h.getPeople()
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+			writeErrorResponse(err)
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		var b strings.Builder
 		for _, v := range p {
-			_, _ = io.WriteString(w, fmt.Sprintln(v))
+			b.WriteString(fmt.Sprintf("%s %s #%s", v.FirstName, v.LastName, v.Id.Hex()))
+			b.WriteString("\n")
 		}
+		writeOkResponse(b.String())
 
 	case "POST":
 		body := make([]byte, request.ContentLength)
-
 		_, err := io.ReadFull(request.Body, body)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+			writeErrorResponse(err)
 			return
 		}
 
-		var jsonv map[string]interface{}
-
-		err = json.Unmarshal(body, &jsonv)
+		var p Person
+		err = json.Unmarshal(body, &p)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+			writeErrorResponse(err)
 			return
 		}
 
-		firstname, _ := jsonv["firstname"].(string)
-		lastname, _ := jsonv["lastname"].(string)
-
-		err = h.addPerson(firstname, lastname)
+		err = h.addPerson(p.FirstName, p.LastName)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+			writeErrorResponse(err)
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "New person added.")
+		writeOkResponse("New person added.")
 
 	case "DELETE":
 		query := request.URL.Query()
@@ -91,74 +100,59 @@ func (h PeopleHandler) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 			for _, id := range ids {
 				err := h.removePerson(id)
 				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+					writeErrorResponse(err)
 				}
 			}
 
-			w.WriteHeader(http.StatusOK)
-			_, _ = io.WriteString(w, "Person(s) removed.")
+			writeOkResponse("Person(s) removed.")
 		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = io.WriteString(w, "Error: Unknown request")
+			writeErrorResponse(errors.New("Unknown query parameter(s)"))
 		}
 	}
 }
 
-func (h PeopleHandler) getPeople() ([]bson.M, error) {
+func (h PeopleHandler) getPeople() (people []Person, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	cur, err := h.people.Find(ctx, bson.D{})
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer cur.Close(ctx)
 
-	var p []bson.M
-
 	for cur.Next(ctx) {
-		var person bson.M
+		var p Person
 
-		err := cur.Decode(&person)
+		err = cur.Decode(&p)
 		if err != nil {
-			return nil, err
+			return
 		}
 
-		p = append(p, person)
+		people = append(people, p)
 	}
 
-	return p, nil
+	return
 }
 
-func (h PeopleHandler) addPerson(firstname, lastname string) error {
+func (h PeopleHandler) addPerson(firstname, lastname string) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := h.people.InsertOne(ctx, bson.M{
+	_, err = h.people.InsertOne(ctx, bson.M{
 		"firstname": firstname,
 		"lastname":  lastname,
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return
 }
 
-func (h PeopleHandler) removePerson(id string) error {
+func (h PeopleHandler) removePerson(id string) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
+	oid, _ := primitive.ObjectIDFromHex(id)
 	_, err = h.people.DeleteOne(ctx, bson.M{"_id": oid})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return
 }
