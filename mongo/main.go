@@ -171,12 +171,14 @@ func okResponse(w http.ResponseWriter, v interface{}) {
 	e := json.NewEncoder(w)
 	_ = e.Encode(v)
 }
+
 func serverError(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusInternalServerError)
 
 	e := json.NewEncoder(w)
 	_ = e.Encode(fmt.Sprintf("Error: %v", err))
 }
+
 func badRequest(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusBadRequest)
 
