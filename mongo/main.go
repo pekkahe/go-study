@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,7 +16,7 @@ import (
 )
 
 type Person struct {
-	Id        primitive.ObjectID `json:"id,omitempty" bson:"_id"`
+	Id        primitive.ObjectID `json:"id" bson:"_id"`
 	FirstName string             `json:"firstname,omitempty"`
 	LastName  string             `json:"lastname,omitempty"`
 }
@@ -44,54 +42,60 @@ func main() {
 }
 
 func (h PeopleHandler) ServeHTTP(w http.ResponseWriter, request *http.Request) {
-	writeOkResponse := func(msg string) {
+	okResponse := func(v interface{}) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, msg)
+		e := json.NewEncoder(w)
+		_ = e.Encode(v)
 	}
-	writeErrorResponse := func(err error) {
+	errorResponse := func(v interface{}) {
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = io.WriteString(w, fmt.Sprintln("Error: ", err))
+		e := json.NewEncoder(w)
+		_ = e.Encode(v)
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	switch request.Method {
 	case "GET":
 		p, err := h.getPeople()
 		if err != nil {
-			writeErrorResponse(err)
+			errorResponse(err)
 			return
 		}
 
-		var b strings.Builder
-		for _, v := range p {
-			b.WriteString(fmt.Sprintf("%s %s #%s", v.FirstName, v.LastName, v.Id.Hex()))
-			b.WriteString("\n")
+		b, err := json.Marshal(p)
+		if err != nil {
+			errorResponse(err)
+			return
 		}
-		writeOkResponse(b.String())
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(b)
 
 	case "POST":
 		body := make([]byte, request.ContentLength)
+
 		_, err := io.ReadFull(request.Body, body)
 		if err != nil {
-			writeErrorResponse(err)
+			errorResponse(err)
 			return
 		}
 
 		var p Person
+
 		err = json.Unmarshal(body, &p)
 		if err != nil {
-			writeErrorResponse(err)
+			errorResponse(err)
 			return
 		}
 
 		err = h.addPerson(p.FirstName, p.LastName)
 		if err != nil {
-			writeErrorResponse(err)
+			errorResponse(err)
 			return
 		}
 
-		writeOkResponse("New person added.")
+		okResponse("New person added.")
 
 	case "DELETE":
 		query := request.URL.Query()
@@ -100,13 +104,13 @@ func (h PeopleHandler) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 			for _, id := range ids {
 				err := h.removePerson(id)
 				if err != nil {
-					writeErrorResponse(err)
+					errorResponse(err)
 				}
 			}
 
-			writeOkResponse("Person(s) removed.")
+			okResponse("Person(s) removed.")
 		} else {
-			writeErrorResponse(errors.New("Unknown query parameter(s)"))
+			errorResponse(errors.New("Unknown query parameter(s)"))
 		}
 	}
 }
